@@ -1,4 +1,4 @@
-package com.cuscatlan.orders.domain.repository;
+package com.cuscatlan.orders.infrastructure.repository;
 
 import com.cuscatlan.orders.domain.model.Order;
 import org.springframework.data.jpa.repository.JpaRepository;

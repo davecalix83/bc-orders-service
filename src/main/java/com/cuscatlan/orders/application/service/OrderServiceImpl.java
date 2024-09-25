@@ -5,7 +5,7 @@ import com.cuscatlan.orders.application.dto.OrderItemDto;
 import com.cuscatlan.orders.application.dto.ProductDto;
 import com.cuscatlan.orders.domain.model.Order;
 import com.cuscatlan.orders.domain.model.OrderItem;
-import com.cuscatlan.orders.domain.repository.OrderRepository;
+import com.cuscatlan.orders.infrastructure.repository.OrderRepository;
 import com.cuscatlan.orders.infrastructure.external.ProductServiceClient;
 import com.cuscatlan.orders.shared.mapper.OrderItemMapper;
 import com.cuscatlan.orders.shared.mapper.OrderMapper;
