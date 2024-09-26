@@ -1,19 +1,20 @@
 package com.cuscatlan.orders.application.service;
 
-import com.cuscatlan.orders.application.dto.OrderDto;
+import com.cuscatlan.orders.application.dto.OrderRequestDto;
+import com.cuscatlan.orders.application.dto.OrderResponseDto;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface OrderService {
 
-    OrderDto createOrder(OrderDto orderDto);
+    OrderResponseDto createOrder(OrderRequestDto orderDto);
 
-    List<OrderDto> getAllOrders();
+    List<OrderRequestDto> getAllOrders();
 
-    Optional<OrderDto> getOrderById(Long id);
+    Optional<OrderRequestDto> getOrderById(Long id);
 
-    Optional<OrderDto> updateOrder(OrderDto orderDto);
+    Optional<OrderResponseDto> updateOrder(OrderRequestDto orderDto);
 
-    void deleteOrder(Long id);
+    OrderResponseDto deleteOrder(Long id);
 }

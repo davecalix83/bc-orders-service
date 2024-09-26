@@ -1,6 +1,7 @@
 package com.cuscatlan.orders.application.controller;
 
-import com.cuscatlan.orders.application.dto.OrderDto;
+import com.cuscatlan.orders.application.dto.OrderRequestDto;
+import com.cuscatlan.orders.application.dto.OrderResponseDto;
 import com.cuscatlan.orders.application.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,27 +18,30 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    public ResponseEntity<OrderDto> createOrder(@RequestBody OrderDto orderDto) {
-        OrderDto createdOrder = orderService.createOrder(orderDto);
+    public ResponseEntity<OrderResponseDto> createOrder(@RequestBody OrderRequestDto orderRequestDto) {
+        OrderResponseDto createdOrder = orderService.createOrder(orderRequestDto);
         return new ResponseEntity<>(createdOrder, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<List<OrderDto>> getAllOrders() {
-        List<OrderDto> orders = orderService.getAllOrders();
+    public ResponseEntity<List<OrderRequestDto>> getAllOrders() {
+        List<OrderRequestDto> orders = orderService.getAllOrders();
         return new ResponseEntity<>(orders, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderDto> getOrderById(@PathVariable Long id) {
+    public ResponseEntity<OrderRequestDto> getOrderById(@PathVariable Long id) {
         return orderService.getOrderById(id)
                 .map(orderDto -> new ResponseEntity<>(orderDto, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @PutMapping()
-    public ResponseEntity<OrderDto> updateOrder(@RequestBody OrderDto orderDto) {
-        return orderService.updateOrder(orderDto)
+    public ResponseEntity<OrderResponseDto> updateOrder(@RequestBody OrderRequestDto orderRequestDto) {
+        if (orderRequestDto.getId() == null) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        return orderService.updateOrder(orderRequestDto)
                 .map(updatedOrder -> new ResponseEntity<>(updatedOrder, HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
