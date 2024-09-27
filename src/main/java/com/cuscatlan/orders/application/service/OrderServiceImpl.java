@@ -1,28 +1,36 @@
 package com.cuscatlan.orders.application.service;
 
 import com.cuscatlan.orders.application.dto.*;
+import com.cuscatlan.orders.domain.exception.NoOrdersFoundException;
+import com.cuscatlan.orders.domain.exception.OrderDeletionException;
 import com.cuscatlan.orders.domain.exception.OrderNotFoundException;
 import com.cuscatlan.orders.domain.exception.ProductNotFoundException;
+import com.cuscatlan.orders.domain.exception.UpdateOrderException;
 import com.cuscatlan.orders.domain.model.Order;
 import com.cuscatlan.orders.domain.model.OrderItem;
-import com.cuscatlan.orders.infrastructure.repository.OrderRepository;
 import com.cuscatlan.orders.infrastructure.external.ProductServiceClient;
+import com.cuscatlan.orders.infrastructure.repository.OrderRepository;
 import com.cuscatlan.orders.shared.mapper.OrderItemMapper;
 import com.cuscatlan.orders.shared.mapper.OrderMapper;
 import com.cuscatlan.orders.shared.utils.Common;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
+
+    private static final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
+    private static final String NO_ORDERS_FOUND_MESSAGE = "No order records found.";
+    private static final String ORDER_CREATION_SUCCESS_MESSAGE = "Order created successfully";
 
     private final OrderRepository orderRepository;
     private final ProductServiceClient productServiceClient;
@@ -32,21 +40,26 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponseDto createOrder(OrderRequestDto orderRequestDto) {
+
         Order order = orderMapper.toEntity(orderRequestDto);
         processOrderItems(order, orderRequestDto.getItems());
         Order savedOrder = orderRepository.save(order);
         return common.buildOrderResponse(
-                savedOrder.getId()
-                , "OK"
-                , "Order created successfully"
+                savedOrder.getId(),
+                "OK",
+                ORDER_CREATION_SUCCESS_MESSAGE
         );
     }
 
     @Override
     public List<OrderRequestDto> getAllOrders() {
-        return orderRepository.findAll().stream()
+        List<OrderRequestDto> orders = orderRepository.findAll().stream()
                 .map(orderMapper::toDto)
                 .collect(Collectors.toList());
+        if (orders.isEmpty()) {
+            throw new NoOrdersFoundException(NO_ORDERS_FOUND_MESSAGE);
+        }
+        return orders;
     }
 
     @Override
@@ -61,14 +74,19 @@ public class OrderServiceImpl implements OrderService {
         Order existingOrder = orderRepository.findById(orderRequestDto.getId())
                 .orElseThrow(() -> new OrderNotFoundException(orderRequestDto.getId()));
 
-        updateOrderDetails(existingOrder, orderRequestDto);
-        processOrderItems(existingOrder, orderRequestDto.getItems());
-        Order updatedOrder = orderRepository.save(existingOrder);
-        return Optional.of(
-                common.buildOrderResponse(updatedOrder.getId()
-                        , "OK"
-                        , "Order updated successfully")
-        );
+        try {
+            updateOrderDetails(existingOrder, orderRequestDto);
+            processOrderItems(existingOrder, orderRequestDto.getItems());
+            Order updatedOrder = orderRepository.save(existingOrder);
+            return Optional.of(
+                    common.buildOrderResponse(updatedOrder.getId(),
+                            "OK",
+                            "Order updated successfully")
+            );
+        } catch (Exception e) {
+            throw new UpdateOrderException("Failed to update order: " + e.getMessage());
+        }
+
     }
 
     @Override
@@ -76,12 +94,16 @@ public class OrderServiceImpl implements OrderService {
         if (!orderRepository.existsById(id)) {
             throw new OrderNotFoundException(id);
         }
-        orderRepository.deleteById(id);
-        return common.buildOrderResponse(
-                id
-                , "OK"
-                , "Order deleted successfully"
-        );
+        try {
+            orderRepository.deleteById(id);
+            return common.buildOrderResponse(
+                    id,
+                    "OK",
+                    "Order deleted successfully"
+            );
+        } catch (Exception e) {
+            throw new OrderDeletionException("Failed to delete order with ID: " + id + ". Reason: " + e.getMessage());
+        }
     }
 
     private void processOrderItems(@NotNull Order order, @NotNull List<OrderItemDto> orderItemDtos) {
