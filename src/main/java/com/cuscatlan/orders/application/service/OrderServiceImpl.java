@@ -13,14 +13,14 @@ import com.cuscatlan.orders.infrastructure.repository.OrderRepository;
 import com.cuscatlan.orders.shared.mapper.OrderItemMapper;
 import com.cuscatlan.orders.shared.mapper.OrderMapper;
 import com.cuscatlan.orders.shared.utils.Common;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -28,7 +28,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
-    private static final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
     private static final String NO_ORDERS_FOUND_MESSAGE = "No order records found.";
     private static final String ORDER_CREATION_SUCCESS_MESSAGE = "Order created successfully";
 
@@ -40,10 +39,13 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponseDto createOrder(OrderRequestDto orderRequestDto) {
-
         Order order = orderMapper.toEntity(orderRequestDto);
         processOrderItems(order, orderRequestDto.getItems());
+        order.setStatus("PENDING");
+        order.setOrderDate(LocalDateTime.now());
+        order.setTotalAmount(calculateTotalAmount(order.getItems())); // Cambiado
         Order savedOrder = orderRepository.save(order);
+
         return common.buildOrderResponse(
                 savedOrder.getId(),
                 "OK",
@@ -77,6 +79,9 @@ public class OrderServiceImpl implements OrderService {
         try {
             updateOrderDetails(existingOrder, orderRequestDto);
             processOrderItems(existingOrder, orderRequestDto.getItems());
+            existingOrder.setOrderDate(LocalDateTime.now());
+            existingOrder.setTotalAmount(calculateTotalAmount(existingOrder.getItems()));
+            existingOrder.setStatus(existingOrder.getStatus());
             Order updatedOrder = orderRepository.save(existingOrder);
             return Optional.of(
                     common.buildOrderResponse(updatedOrder.getId(),
@@ -86,7 +91,6 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             throw new UpdateOrderException("Failed to update order: " + e.getMessage());
         }
-
     }
 
     @Override
@@ -109,18 +113,20 @@ public class OrderServiceImpl implements OrderService {
     private void processOrderItems(@NotNull Order order, @NotNull List<OrderItemDto> orderItemDtos) {
         order.getItems().clear();
         orderItemDtos.forEach(orderItemDto -> {
-            validateProduct(orderItemDto.getProductId());
+            ProductDto product = validateProduct(orderItemDto.getProductId());
             OrderItem orderItem = orderItemMapper.toEntity(orderItemDto);
+            orderItem.setPrice(product.getPrice());
             orderItem.setOrder(order);
             order.getItems().add(orderItem);
         });
     }
 
-    private void validateProduct(Long productId) {
+    private ProductDto validateProduct(Long productId) {
         ProductDto product = productServiceClient.getProductById(productId);
         if (product == null) {
             throw new ProductNotFoundException(productId);
         }
+        return product;
     }
 
     private void updateOrderDetails(@NotNull Order existingOrder, @NotNull OrderRequestDto orderRequestDto) {
@@ -128,5 +134,12 @@ public class OrderServiceImpl implements OrderService {
         existingOrder.setOrderDate(orderRequestDto.getOrderDate());
         existingOrder.setStatus(orderRequestDto.getStatus());
         existingOrder.setTotalAmount(orderRequestDto.getTotalAmount());
+    }
+
+  
+    private BigDecimal calculateTotalAmount(List<OrderItem> items) {
+        return items.stream()
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()))) 
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
