@@ -102,7 +102,8 @@ public class OrderServiceImpl implements OrderService {
 
         existingOrder.setOrderDate(LocalDateTime.now());
         existingOrder.setTotalAmount(utils.calculateTotalAmount(existingOrder.getItems()));
-        existingOrder.setStatus(existingOrder.getStatus());
+        existingOrder.setStatus("PENDING");
+        
         Order updatedOrder = saveOrder(existingOrder);
 
         return Optional.of(buildOrderResponse(updatedOrder.getId(), "Order updated successfully"));
