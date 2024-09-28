@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents an order in the system.
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -15,12 +18,17 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 public class Order {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
     private Long customerId;
+    
     private LocalDateTime orderDate;
+    
     private String status;
+    
     private BigDecimal totalAmount;
 
     @OneToMany(

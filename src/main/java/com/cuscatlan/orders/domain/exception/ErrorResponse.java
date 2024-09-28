@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- *
- * @author hguzman
+ * Represents an error response structure for API error messages.
+ * This class is used to encapsulate error details sent in the response body.
  */
 @Data
 @Builder
@@ -16,7 +16,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ErrorResponse {
 
+    /** The status of the error (e.g., "ERROR", "FAILURE"). */
     private String status;
+
+    /** A descriptive message detailing the error encountered. */
     private String message;
+
+    /** The timestamp when the error was processed. */
     private LocalDateTime processedAt;
 }
